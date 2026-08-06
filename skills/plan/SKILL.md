@@ -109,8 +109,13 @@ The signal is explicit: "go", "start", "write it", "ok, do it" — or in Spanish
 Then save to `docs/plans/` with the ticket id as the name (or a short slug of the problem,
 noting which name you used).
 
-Sections: Problem - Scope (includes and does NOT include) - Approach and why - Numbered steps
-with the files for each - Tests - Risks - Open decisions.
+Sections: Problem - Scope (includes and does NOT include) - Approach and why - Numbered steps -
+Tests - Risks - Open decisions.
+
+The **Numbered steps** are the heart of it: each step spells out concretely **what gets
+executed or changed** (the files, the commands to run) and **the commit that closes it** (its
+message and scope). Write them so `ship` can follow them as the exact execute-and-commit
+checklist — one commit per step, in the repo's commit format.
 
 Two things the plan must capture from the discussion, or everything discussed is lost:
 
@@ -121,15 +126,18 @@ Two things the plan must capture from the discussion, or everything discussed is
 
 Write "Problem" in the user's words, not the code's.
 
-## 4. Start
+## 4. Confirm they read it, then start
 
 After writing the plan: summarize in three lines (approach, number of steps, human-review
-flags) and **invoke `ship` immediately**, in the same turn.
+flags), point the user at the file, and **ask them to confirm they've read it before you
+ship** — e.g. "¿Lo leíste? ¿Arranco con el ship?" / "Did you read it? Ready for me to ship?".
+Do **not** invoke `ship` on your own here — wait for their explicit go.
 
-The "go" from step 3 was already the approval; don't ask for it again. Only exception: if the
-user says they want to read the plan first, stop and wait.
+The plan is exactly what `ship` executes commit-by-commit, so a quick read now catches a wrong
+step before it turns into commits. If they want changes, revise the plan and ask again.
 
-If there are open decisions left, don't start: go back to step 2 and close them.
+Only once they confirm, invoke the `ship` skill in the same turn. If there are open decisions
+left, don't offer to ship yet: go back to step 2 and close them.
 
 ---
 
