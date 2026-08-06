@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "keykor",
+  "description": "Leonardo's personal Claude Code plugins.",
+  "owner": {
+    "name": "Leonardo Loza",
+    "url": "https://github.com/Keykor"
+  },
+  "plugins": [
+    {
+      "name": "ship-it",
+      "description": "Opinionated plan -> ship -> review workflow. Plan a feature, implement it by milestones, open the PR, and drive the Copilot review loop. Repo-agnostic: reads each repo's CLAUDE.md.",
+      "source": "./",
+      "category": "workflow"
+    }
+  ]
+}
