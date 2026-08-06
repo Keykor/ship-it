@@ -57,7 +57,8 @@ Drop this into `~/.claude/settings.json`:
 {
   "extraKnownMarketplaces": {
     "keykor": {
-      "source": { "source": "github", "repo": "Keykor/ship-it" }
+      "source": { "source": "github", "repo": "Keykor/ship-it" },
+      "autoUpdate": true
     }
   },
   "enabledPlugins": {
