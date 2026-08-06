@@ -41,6 +41,18 @@ Intake rules:
 
 ## 1. Explore
 
+First, sync the checkout so you design against real code, not a stale copy:
+
+```bash
+git fetch origin
+git pull --ff-only
+```
+
+`git fetch origin` refreshes every remote branch (so you know the real state of things), and
+`--ff-only` updates the current branch only if it fast-forwards cleanly. If it can't (the
+branch diverged, or there are uncommitted changes in the way), it stops without a merge or a
+conflict — surface that to the user and let them sort it, don't force it.
+
 - Read `CLAUDE.md` in full.
 - Locate the files that will actually be touched. Cite them by path.
 - Look for something similar already in the repo and follow that pattern.

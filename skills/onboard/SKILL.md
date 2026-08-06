@@ -27,7 +27,8 @@ the flow just fails on `gh` otherwise.
 
 ## 1. Explore (what you discover on your own)
 
-Read, don't guess:
+Refresh first so you read the real state, not a stale checkout: `git fetch origin` (updates
+every remote branch). Then read, don't guess:
 
 - Build manifests: `go.mod`, `pom.xml`, `build.gradle`, `package.json`, `Makefile`,
   `Taskfile.yml`. The real build, test, and lint commands come from here.
