@@ -1,6 +1,6 @@
 {
   "name": "ship-it",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Opinionated plan -> ship -> review workflow for Claude Code. Skills: onboard, plan, ship, watch, fix. Reads per-repo config from CLAUDE.md so the same flow works across every repo.",
   "author": {
     "name": "Leonardo Loza",

@@ -89,9 +89,40 @@ mkdir -p docs/plans
 If the repo uses GitHub Copilot review, check that `.github/copilot-instructions.md` exists;
 if not, offer to create it.
 
-If the repo runs lint/format/tests through a Claude Code hook in `.claude/settings.json`, make
-sure the hook has the real command discovered in step 1 (not a placeholder). If there's no
-such hook, leave it — don't invent one.
+### Make the repo self-configuring (offer this)
+
+So the flow runs without anyone editing their personal/global settings, offer to seed the
+repo's committed `.claude/settings.json` with what the flow needs. **Merge** into it if it
+already exists — never clobber existing keys or arrays.
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(git:*)", "Bash(gh:*)", "<the repo's build/test/lint/run commands>"],
+    "deny": ["Bash(git push --force:*)", "Bash(git reset --hard:*)", "Bash(gh pr merge:*)"]
+  },
+  "sandbox": {
+    "excludedCommands": ["git", "gh"]
+  }
+}
+```
+
+- The `allow` list is git/gh **plus this repo's platform-specific commands** — the ones you
+  found in step 1 (`Bash(go test:*)`, `Bash(mvn:*)`, `Bash(npm run build:*)`, `Bash(gradle:*)`,
+  etc.). Don't guess the stack: use what step 1 read, and **ask the user** which commands they
+  run often that should never prompt (build, test, lint, run). A Go repo and a Java or JS repo
+  get different lists.
+- `excludedCommands` runs git/gh outside the sandbox — that fixes both the `gh` TLS failure
+  inside the sandbox and git being unable to write, and because they run outside, the flow
+  needs no user-level network knob.
+
+Say two things before writing it: it's **committed**, so teammates inherit the same sandbox
+exclusion in this repo (they can override it in their own `.claude/settings.local.json`); and
+the sandbox's writable area is the folder Claude Code launched in, so it should be started from
+inside the repo.
+
+If the repo runs lint/format/tests through a Claude Code hook, put the real command (from step
+1) in that same `.claude/settings.json`. Don't invent a hook that isn't there.
 
 ## 5. Close
 
