@@ -37,6 +37,15 @@ across repos). `union: true` makes it idempotent, so re-requesting never breaks 
 doubt, request again. The REST `requested_reviewers` API returns 422 (the bot isn't a
 collaborator); use GraphQL with `botIds`.
 
+**This is also how you avoid waiting forever for a review that will never come.** If Copilot
+code review isn't enabled on the repo, its bot id can't be requested and the mutation comes
+back with an `errors` array instead of a `clientMutationId`. So **check the result**: if it
+errored, Copilot review isn't set up — do **not** arm the watcher. Tell the user to enable it
+(repo Settings > Copilot > Code review, or add a "Copilot code review" rule under Settings >
+Rules > Rulesets) and stop. A clean `clientMutationId` back means Copilot is available →
+proceed to step 2. (The poller's timeout in step 3 is the backstop for the rarer case where
+the request is accepted but no review ever lands.)
+
 ## 2. Arm the watcher — one background Bash call
 
 The poller ships with this plugin and is on your `PATH` (Claude Code adds every plugin's
