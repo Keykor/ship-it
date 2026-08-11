@@ -8,12 +8,18 @@ allowed-tools: Bash(gh *)
 
 ## PR #$0
 
+- Argument: !`case "$0" in ''|*[!0-9]*) echo "MISSING — invoke as /ship-it:fix <pr-number>";; *) echo "PR $0";; esac`
 - !`gh pr view $0 --json number,title,url,state,labels --jq '"\(.title) [\(.state)] \(.url) — labels: \(if (.labels|length) == 0 then "none" else ([.labels[].name] | join(", ")) end)"' 2>&1`
 - Threads: !`gh pr view $0 --comments 2>&1`
 - Inline: !`gh api repos/{owner}/{repo}/pulls/$0/comments --paginate --jq '.[] | "id=\(.id) \(.path):\(.line // .original_line) by \(.user.login)\(if .in_reply_to_id then " reply-to=\(.in_reply_to_id)" else "" end)\n\(.body)\n---"' 2>&1`
 
-That block was fetched before you read anything, so the comments are already here — **don't
-re-fetch them**. If it came back with an error instead of data, say what failed and stop.
+**If the Argument line says MISSING, stop right there** and ask for the PR number. An
+unsubstituted `$0` doesn't come through empty — the shell expands it to the process name, so
+every command below quietly queried a PR called `bash`. Everything they returned is garbage.
+
+Otherwise: that block was fetched before you read anything, so the comments are already here —
+**don't re-fetch them**. If any line came back with an error instead of data, say what failed
+and stop.
 
 `gh api` expands `{owner}/{repo}` from the current repo on its own, so there's nothing to
 resolve first.
