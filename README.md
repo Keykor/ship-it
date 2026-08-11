@@ -111,15 +111,20 @@ this in the repo's own committed `.claude/settings.json`, which is usually the b
 ## Quickstart
 
 1. Install (above) and restart Claude Code.
-2. In your repo, run `/onboard` — it preflights your setup (`gh` logged in, `jq`, a git remote),
-   writes a `CLAUDE.md`, and adds the two `.gitignore` entries the flow needs. Skip it if the
-   repo already has one.
+2. In your repo, run `/ship-it:onboard` — it preflights your setup (`gh` logged in, `jq`, a git
+   remote), writes an `AGENTS.md`, and adds the two `.gitignore` entries the flow needs. Skip
+   it if the repo already has one.
 3. Describe a change, or say "plan this" — `plan` talks it through and writes
    `docs/plans/<ticket>.md`.
-4. `/clear`, then `/ship docs/plans/<ticket>.md` — builds it in a worktree and opens the PR.
-5. `/clear`, then `/watch <pr>` — gives you a `nohup` line to paste in a terminal. Run it and
-   walk away.
-6. When it pings: `/clear`, then `/fix <pr>`.
+4. `/clear`, then `/ship-it:ship docs/plans/<ticket>.md` — builds it in a worktree and opens
+   the PR.
+5. `/clear`, then `/ship-it:watch <pr>` — gives you a `nohup` line to paste in a terminal. Run
+   it and walk away.
+6. When it pings: `/clear`, then `/ship-it:fix <pr>`.
+
+The bare `/onboard`, `/plan`, `/ship`, `/watch` and `/fix` work too, but only while no other
+installed bundle claims the same name — and `ship` and `fix` in particular are common. The
+skills' own handoff blocks always print the namespaced form for that reason.
 
 You keep talking to it however you like; the skills follow the repo's `CLAUDE.md`.
 
