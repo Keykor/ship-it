@@ -17,8 +17,9 @@ flow works everywhere.
 onboard  ->  plan  ->  /clear  ->  ship  ->  /clear  ->  watch  ->  (ping)  ->  fix
 ```
 
-1. **onboard** — first time in a repo, it reads the code and writes a `CLAUDE.md`: build/test
-   commands, PR base branch, commit style, and what changes need a human. That file is the
+1. **onboard** — first time in a repo, it reads the code and writes an `AGENTS.md` (with
+   `CLAUDE.md` symlinked to it): build/test commands, PR base branch, commit style, what
+   changes need a human, and which docs have to move when which code moves. That file is the
    config the rest of the flow reads. Skip it if the repo already has one.
 2. **plan** — a real back-and-forth before any code. It pokes around the repo, throws you a
    couple of approaches, argues the trade-offs, and only when you say "go" writes the plan to
@@ -136,6 +137,16 @@ You keep talking to it however you like; the skills follow the repo's `CLAUDE.md
 - **Copilot never reviews on its own**, and never re-reviews after a push. Every round has to
   ask; that's `wait-for-review.sh --request <pr>`. If your repo doesn't have Copilot code
   review enabled, that call fails and says so instead of leaving you waiting forever.
+- **`AGENTS.md`, not `CLAUDE.md`.** `AGENTS.md` is the cross-tool standard — Codex, Cursor,
+  Copilot, Gemini CLI, Aider and others read it. Claude Code is the one that doesn't, so
+  `onboard` symlinks `CLAUDE.md` to it and both work. An existing `CLAUDE.md` is left alone
+  unless you agree to the move.
+- **Agent-facing docs get pointed at, never imported.** `onboard` asks which docs go stale
+  when which code changes, then writes each pair into a `paths:`-scoped rule (so `ship`
+  updates the doc while writing the code) and into `.github/copilot-instructions.md` (so the
+  review catches what slipped). The docs themselves stay out of startup context — an
+  `@docs/architecture.md` import costs the whole file on every session, and `/doctor` is
+  built to strip exactly that back out.
 
 ## Make it yours
 
