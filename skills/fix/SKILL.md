@@ -78,8 +78,12 @@ For the "Reject" group:
 - Reply to the thread with the concrete reason. No bare "doesn't apply".
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/comments/{{comment_id}}/replies -f body="{{reply}}"
+gh api repos/{owner}/{repo}/pulls/$0/comments/{{comment_id}}/replies -f body="{{reply}}"
 ```
+
+The PR number belongs in that path. `pulls/comments/{{id}}` without it is a valid route for
+reading or editing a comment, which makes the shorter form look right — but replying to one
+returns 404.
 
 Then:
 
