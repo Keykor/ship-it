@@ -73,18 +73,58 @@ File structure, in this order:
 
 Writing criteria:
 
-- **Target: under 150 lines.** This file enters context every session; if it grows, move a
-  section to another file and reference it with `@path/to/file.md`.
+- **Target: under 150 lines.** This file is re-sent on every turn of every session in this
+  repo, so it is the most expensive text in the project. Treat the limit as a budget.
 - Every line must change the agent's behavior. If it's true but changes nothing, cut it.
 - Write explicit prohibitions, not just recommendations. "Don't add dependencies without
   asking" is worth more than "use dependencies judiciously".
 - Nothing task-specific. That goes in `docs/plans/`, not here.
+
+**Write only what can't be read off the code.** Conventions that depart from the language's
+defaults, pitfalls, the reasoning behind an odd decision, the git and PR rules. Directory
+layouts, dependency lists and architecture overviews don't belong: an agent derives those by
+reading the repo when it needs them, and in the file they cost context in *every* session,
+including the ones that never touch that area.
+
+Three things go somewhere else instead:
+
+| Content | Where | Why |
+|---|---|---|
+| A procedure (how a release is cut, how a migration runs) | A skill | Loads only when it's used |
+| Anything that applies to one part of the repo | `.claude/rules/{{name}}.md` with `paths:` globs in its frontmatter | Loads only when files matching the globs are in play |
+| Anything task-specific | `docs/plans/` | Not permanent context |
+
+Don't use `@path/to/file.md` imports to shrink the file. Imported files are pulled in at
+startup just the same, so the context cost is identical — it only looks smaller. `paths:`
+rules are the mechanism that actually defers loading.
+
+### If a CLAUDE.md already exists: move, never delete
+
+Other tooling may depend on what's in there. Every line you take out has to land somewhere —
+a rule file or a skill — and you have to report where it went. If something fits neither,
+**leave it where it is** and say so. Trimming a file by deleting is not the job.
 
 ## 4. Leave the repo ready
 
 ```bash
 mkdir -p docs/plans
 ```
+
+Then make sure the repo's `.gitignore` has these two lines, appending them if missing (don't
+rewrite the file, and don't touch anything else in it):
+
+```gitignore
+.claude/worktrees/
+docs/plans/
+```
+
+- `.claude/worktrees/` — `ship` implements inside a worktree there. It is **not** ignored by
+  default, so without this line a live worktree shows up as `?? .claude/` in everyone's
+  `git status`. Ignore only that subdirectory: `.claude/settings.json` below is meant to be
+  committed.
+- `docs/plans/` — plans are a local working artifact, not product. They stay on disk so the
+  flow can read them, and never reach the base branch on merge. The agreed criteria travel to
+  the reviewer in the PR body instead, which is `ship`'s job.
 
 If the repo uses GitHub Copilot review, check that `.github/copilot-instructions.md` exists;
 if not, offer to create it.
@@ -126,9 +166,16 @@ If the repo runs lint/format/tests through a Claude Code hook, put the real comm
 
 ## 5. Close
 
-Report in a few lines: what you discovered on your own, what's left as `{{fill-in}}`, and the
-user's answers you folded in. Suggest testing the file with the first `plan` run, which is
-where you notice if something's missing.
+Report in a few lines: what you discovered on your own, what's left as `{{fill-in}}`, the
+user's answers you folded in, and — if the `CLAUDE.md` already existed — **a line per piece
+of content you moved, saying where it went**.
+
+Then tell them two things to run:
+
+- `/context` in a fresh session here, to see what the file actually costs at startup.
+- `/doctor`, which reviews an existing `CLAUDE.md` and proposes cuts.
+
+And that the real test is the first `plan` run: that's where a missing piece shows up.
 
 ---
 

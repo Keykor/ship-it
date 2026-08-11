@@ -1,51 +1,85 @@
 ---
 name: ship
-description: Takes an approved plan from docs/plans/ and drives it to an open PR. Implements it by milestones, commits per milestone in the repo's style, and opens the PR against the repo's base branch. Use whenever the user approves a plan, says "ship it", "go", "start", "implement it", "do it", or asks to open a PR for already-planned work — or in Spanish "dale", "arrancá", "implementalo", "hacelo".
+description: Takes an approved plan from docs/plans/ and drives it to an open PR. Implements it by milestones in an isolated worktree, commits per milestone in the repo's style, and opens the PR against the repo's base branch. Use whenever the user approves a plan, says "ship it", "go", "start", "implement it", "do it", or asks to open a PR for already-planned work — or in Spanish "dale", "arrancá", "implementalo", "hacelo".
+argument-hint: "[path-to-plan]"
+disable-model-invocation: true
 ---
 
 # Implement and open the PR
 
-Takes a plan from `docs/plans/{{ticket}}.md` and drives it to an open PR.
+Takes the plan at `$0` and drives it to an open PR.
 
-**Precondition:** the plan exists, is approved, and has no open decisions. If there's no
-plan, don't improvise: run the `plan` skill first.
+**Precondition:** the plan exists, is approved, and its "Open decisions" section is empty. If
+there's no plan, don't improvise: run the `plan` skill first.
 
-Read the repo's `CLAUDE.md` before anything: the **base branch**, the **branch-naming**
-convention, and the **commit format** all come from its "Git and PRs" section. Don't assume
-`main`/`master`/`test` — read which one this repo uses. Resolve the GitHub repo once:
+Run `/model sonnet` if the session isn't on it already — this is execution, not analysis.
+
+## 0. Read the plan — and only the plan
+
+Read `$0` in full. If no argument came in, find it in `docs/plans/` and say which one you
+picked.
+
+The plan is written to be self-sufficient: it names the exact files, what changes in each,
+the milestones with their commit messages, the verification command per milestone, and the
+decisions already closed. **Don't explore the repo to rebuild context that's already there,
+and don't reopen a decision listed under "Decisions already made".**
+
+Read the repo's `CLAUDE.md` too: the **base branch**, the **branch-naming** convention, and
+the **commit format** come from its "Git and PRs" section. Don't assume `main`/`master`/`test`.
+Resolve the GitHub repo once:
 
 ```bash
 gh repo view --json nameWithOwner -q .nameWithOwner   # -> {{owner}}/{{repo}}
 ```
 
-## 1. Prepare
+## 1. Prepare — in an isolated worktree
+
+Implementation always runs in its own worktree, so two ships in the same repo never fight
+over the working tree. Use the **EnterWorktree** tool (plain `git worktree add` fails under
+the sandbox, which can't write `.git/`):
+
+```
+EnterWorktree  name: {{ticket}}
+```
+
+It lands in `.claude/worktrees/{{ticket}}` on a branch named `worktree-{{ticket}}`, based on
+the repo's default branch — neither of which is what this repo uses. Fix both in one step:
 
 ```bash
 git fetch origin
-git switch -c {{type}}/{{ticket}}-{{slug}} origin/{{base}}
+git switch -C {{type}}/{{ticket}}-{{slug}} origin/{{base}}
 ```
 
 `{{base}}` is the base branch from `CLAUDE.md`. `{{type}}` (`feature`/`fix`/`chore`) comes
 from the nature of the ticket. `{{slug}}` is short, lowercase, hyphenated.
 
-Reread the whole plan before writing the first line of code.
+Two things to know about being inside the worktree:
 
-## 2. Implement step by step
+- The session **cannot touch the shared checkout** — a `git -C` back to it is refused. That's
+  the isolation working, not a bug.
+- The plan file lives in the main checkout and does **not** exist here (it's untracked, so it
+  doesn't travel). That's why step 0 reads it first. Don't go looking for it.
 
-For **each** step of the plan, in order:
+If `.claude/worktrees/` isn't in the repo's `.gitignore`, add it in the first commit — a live
+worktree otherwise shows up as `?? .claude/` in everyone's `git status`.
 
-1. Implement just that step.
-2. Run lint and unit tests (commands in `CLAUDE.md`).
-3. If something fails, fix it before moving on. Don't accumulate debt between steps.
-4. Commit using the repo's commit format (`CLAUDE.md`), referencing the ticket.
+## 2. Implement, milestone by milestone
+
+For **each** milestone of the plan, in order:
+
+1. Implement just that milestone.
+2. Run its **Verify** command — the exact one the plan specifies for it.
+3. **If it fails, stop there.** Fix it before moving on; don't accumulate debt between
+   milestones and don't commit a red milestone.
+4. Commit with the message the plan gives for that milestone, in the repo's commit format.
 
 Rules:
 
 - **Don't go out of the plan's scope.** If ugly code or an adjacent bug shows up, note it for
   the PR's "Notes" section; don't fix it.
-- If during implementation you find the plan was wrong: **stop**, update
-  `docs/plans/{{ticket}}.md` with the change of approach and its reason, tell the user, and
-  only then continue. Don't drift silently.
+- If the plan turns out to be wrong: **stop**, tell the user what's wrong and what you'd
+  change, and wait. Don't drift silently, and don't rewrite the plan on your own — it was
+  agreed in a conversation you weren't part of.
 - The plan's tests get written, not left for later.
 
 ## 3. Pre-PR check
@@ -63,21 +97,24 @@ git push -u origin HEAD
 gh pr create --base {{base}} --title "{{ticket}}: {{title}}" --body-file {{temp file}}
 ```
 
-PR body:
+The plan is a local artifact and never gets committed, so the PR body is the only place the
+reviewer sees the agreed criteria. Carry it over:
 
 ```markdown
 ## What it does
 {{Two or three lines.}}
 
-## Plan
-docs/plans/{{TICKET}}.md
+## Goal and scope
+{{The plan's Goal, verbatim.}}
+
+**Out of scope:** {{the plan's out-of-scope line, verbatim}}
 
 ## How to test it
 {{Concrete steps to verify by hand.}}
 
 ## Notes for the reviewer
-{{Non-obvious decisions. Things left out of scope on purpose. If the plan had risks, repeat
-them here.}}
+{{Non-obvious decisions, taken from the plan's "Decisions already made". Things left out of
+scope on purpose. The plan's risks, if it had any.}}
 ```
 
 If the plan was flagged as requiring human review, or the change touches anything on the
@@ -91,25 +128,57 @@ and say so in the final message.
 
 **Always request Copilot's review**, regardless of whether the PR is `needs-human`. They're
 two different things: the label is about who can merge, Copilot's review is an automatic pass
-that goes either way. If it doesn't self-request:
+that goes either way. The plugin bundles the script that does it (its `bin/` is on your
+`PATH`), so call it by name:
 
 ```bash
-PRID=$(gh api graphql -f query='query { repository(owner:"{{owner}}", name:"{{repo}}") { pullRequest(number:{{n}}) { id } } }' --jq '.data.repository.pullRequest.id')
-gh api graphql -f query="mutation { requestReviews(input:{pullRequestId:\"$PRID\", botIds:[\"BOT_kgDOCnlnWA\"], union:true}) { clientMutationId } }"
+wait-for-review.sh --request {{n}}
 ```
 
-(`BOT_kgDOCnlnWA` is `copilot-pull-request-reviewer` — a single global GitHub App id, stable
-across repos. The REST `requested_reviewers` API rejects it with 422 because it's not a
-collaborator; go through GraphQL with `botIds`.)
+It requests the review and exits. If it fails, **say so and don't print the handoff below** —
+either Copilot code review isn't enabled on this repo, in which case `watch` would sit there
+forever waiting for a review nobody is going to write, or `gh` can't reach GitHub. The script
+prints which.
 
-## 5. Close
+## 5. Tear the worktree down
+
+The work is on origin now, so the worktree has done its job. Leaving it alive is not free:
+git refuses to check that branch out anywhere else, so the next session's `fix` can't work.
+
+**First prove the branch is pushed**, then remove:
+
+```bash
+git ls-remote --heads origin {{type}}/{{ticket}}-{{slug}}   # must print a sha
+git status -sb                                              # must not say "ahead"
+```
+
+```
+ExitWorktree  action: remove  discard_changes: true
+```
+
+`discard_changes: true` is required because the commits aren't on the original branch — they
+are on origin, which is why this is safe. **If either check above came back empty or showed
+unpushed work, do not remove it.** Say so and leave the worktree alone.
+
+## 6. Close the stage — and stop
 
 Return **only** the PR URL and one line about what's left for human review, if anything.
-Don't summarize all the work: the user sees it in the PR.
+Don't summarize the work: the user sees it in the PR.
 
-Then **invoke the `watch` skill** with the PR number, in the same turn and without asking for
-confirmation. The session stays watching the review. **No exceptions**: a `needs-human` PR
-also goes through the watcher. The label stops the merge, not the review.
+Then print exactly this block and **stop**. Don't invoke `watch` yourself, don't offer to,
+don't start watching the review here.
+
+   ---
+   PR open: {{url}}
+
+   Run these yourself, in order:
+       /clear ship-{{ticket}}
+       /ship-it:watch {{n}}
+   ---
+
+Everything above — the plan, every file read, every diff — is already in the commits and the
+PR. Carrying it into the review rounds means re-sending all of it on every turn, twice over
+if there are two rounds. That is the most expensive context in the whole flow.
 
 Never merge. The merge to the base branch is always done by a person.
 

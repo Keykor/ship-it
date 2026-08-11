@@ -1,24 +1,31 @@
 ---
 name: fix
 description: Processes a PR's review comments (Copilot or human), classifies them, applies the fixes that belong, replies to each thread, and pushes. Use whenever the user says "address the review", "fix what Copilot said", "handle the comments", mentions Copilot already reviewed a PR, or passes a PR number/URL with pending reviews — or in Spanish "revisá los comentarios", "arreglá lo que dijo Copilot", "atendé el review".
+argument-hint: "[pr-number]"
+disable-model-invocation: true
+allowed-tools: Bash(gh *)
 ---
+
+## PR #$0
+
+- !`gh pr view $0 --json number,title,url,state,labels --jq '"\(.title) [\(.state)] \(.url) — labels: \(if (.labels|length) == 0 then "none" else ([.labels[].name] | join(", ")) end)"' 2>&1`
+- Threads: !`gh pr view $0 --comments 2>&1`
+- Inline: !`gh api repos/{owner}/{repo}/pulls/$0/comments --paginate --jq '.[] | "id=\(.id) \(.path):\(.line // .original_line) by \(.user.login)\(if .in_reply_to_id then " reply-to=\(.in_reply_to_id)" else "" end)\n\(.body)\n---"' 2>&1`
+
+That block was fetched before you read anything, so the comments are already here — **don't
+re-fetch them**. If it came back with an error instead of data, say what failed and stop.
+
+`gh api` expands `{owner}/{repo}` from the current repo on its own, so there's nothing to
+resolve first.
 
 # Address review comments
 
-Turn a PR's comments into commits or into justified replies. **Two automatic rounds max**;
+Turn the comments above into commits or into justified replies. **Two automatic rounds max**;
 the third is for a human.
-
-Resolve the repo once up front; every `gh` call below uses it:
-
-```bash
-gh repo view --json nameWithOwner -q .nameWithOwner   # -> {{owner}}/{{repo}}
-```
 
 ## 1. Determine the round
 
-```bash
-gh pr view {{n}} --json labels,title,url
-```
+From the labels in the context block:
 
 - No `ai-round-*` label -> this is **round 1**.
 - Has `ai-round-1` -> this is **round 2**.
@@ -28,22 +35,17 @@ The `needs-human` label does **not** stop this skill: it means a human does the 
 that comments go unaddressed. Both Copilot rounds run anyway. The only things that stop the
 rounds are `ai-round-2`, or a comment landing in the "Human" group (step 3).
 
-## 2. Pull the unresolved comments
+## 2. Get on the branch
 
 ```bash
-gh pr view {{n}} --comments
-gh api repos/{{owner}}/{{repo}}/pulls/{{n}}/comments --paginate
+gh pr checkout $0
 ```
 
 Discard threads already resolved and comments already answered in earlier rounds. Copilot
 tends to repeat comments that were already dismissed: if a previous thread has a justified
 rejection, don't reopen it.
 
-Make sure you're on the PR branch and up to date:
-
-```bash
-git switch {{pr-branch}} && git pull
-```
+You have the comments but not the diff. Read only the files a comment actually points at.
 
 ## 3. Classify each comment
 
@@ -70,14 +72,14 @@ For the "Reject" group:
 - Reply to the thread with the concrete reason. No bare "doesn't apply".
 
 ```bash
-gh api repos/{{owner}}/{{repo}}/pulls/comments/{{comment_id}}/replies -f body="{{reply}}"
+gh api repos/{owner}/{repo}/pulls/comments/{{comment_id}}/replies -f body="{{reply}}"
 ```
 
 Then:
 
 ```bash
 git push
-gh pr edit {{n}} --add-label "ai-round-{{N}}" --remove-label "ai-round-{{N-1}}"
+gh pr edit $0 --add-label "ai-round-{{N}}" --remove-label "ai-round-{{N-1}}"
 ```
 
 ## 5. Escalate what doesn't resolve itself
@@ -85,7 +87,7 @@ gh pr edit {{n}} --add-label "ai-round-{{N}}" --remove-label "ai-round-{{N-1}}"
 If there are "Human" group comments, or this was round 3:
 
 ```bash
-gh pr edit {{n}} --add-label "needs-human" --add-assignee "@me"
+gh pr edit $0 --add-label "needs-human" --add-assignee "@me"
 ```
 
 And leave **one** comment on the PR with the status:
@@ -99,11 +101,27 @@ Automatic rounds completed: {{N}}/2
 Auto-resolved this round: {{count}} fixes, {{count}} justified rejections.
 ```
 
-## 6. Close
+## 6. Close the stage — and stop
 
-Report to the user in three lines: how many were fixed, how many rejected and why, and what's
-left for them. If nothing is pending and the PR is green, say so explicitly — that's the
-signal they can merge.
+Report in three lines: how many were fixed, how many rejected and why, and what's left for
+the user.
+
+Then print the block that matches how this round ended, and **stop**. Don't invoke `watch`
+yourself and don't start another round.
+
+If you pushed fixes and rounds are left — Copilot does **not** re-review on its own, so the
+next `watch` is what re-requests it:
+
+   ---
+   Round {{N}} pushed: {{url}}
+
+   Run these yourself, in order:
+       /clear fix-{{n}}-round-{{N}}
+       /ship-it:watch {{n}}
+   ---
+
+If nothing is pending and the PR is green, say so in one line — that's the merge signal, and
+there's nothing to hand off. Same if you escalated: name what needs them and stop there.
 
 Never merge.
 

@@ -1,7 +1,7 @@
 {
   "name": "ship-it",
-  "version": "0.1.3",
-  "description": "Opinionated plan -> ship -> review workflow for Claude Code. Skills: onboard, plan, ship, watch, fix. Reads per-repo config from CLAUDE.md so the same flow works across every repo.",
+  "version": "0.2.0",
+  "description": "Opinionated plan -> ship -> review workflow for Claude Code. Skills: onboard, plan, ship, watch, fix. Each stage stops and hands off, so context doesn't carry between them. Reads per-repo config from CLAUDE.md so the same flow works across every repo.",
   "author": {
     "name": "Leonardo Loza",
     "url": "https://github.com/Keykor"
