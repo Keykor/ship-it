@@ -109,76 +109,35 @@ The signal is explicit: "go", "start", "write it", "ok, do it" — or in Spanish
 Then save to `docs/plans/` with the ticket id as the name (or a short slug of the problem,
 noting which name you used).
 
-The plan is executed by a **fresh session that never saw this conversation**. Whatever was
-decided here and didn't make it into the file is lost. Use this skeleton:
+Sections: Problem - Scope (includes and does NOT include) - Approach and why - Numbered steps -
+Tests - Risks - Open decisions.
 
-```markdown
-# {{ticket}}: {{title}}
+The **Numbered steps** are the heart of it: each step spells out concretely **what gets
+executed or changed** (the files, the commands to run) and **the commit that closes it** (its
+message and scope). Write them so `ship` can follow them as the exact execute-and-commit
+checklist — one commit per step, in the repo's commit format.
 
-## Goal
-{{One sentence, in the user's words, not the code's.}}
+Two things the plan must capture from the discussion, or everything discussed is lost:
 
-**Out of scope:** {{what this explicitly does not do}}
+- **The discarded alternatives and why.** This is what stops someone (including the agent
+  itself) from redoing the discussion from scratch a month later.
+- **What the user corrected.** If they changed the approach midway, the reason goes in the
+  plan.
 
-## Files to touch
-| Path | What changes |
-|---|---|
-| `src/api/headers.go` | `ParseHeader` — accept the new `X-Trace` header |
+Write "Problem" in the user's words, not the code's.
 
-## Milestones
-1. **{{commit message, in the repo's format}}**
-   - {{What gets changed, concretely.}}
-   - Verify: `{{exact test or build command that must pass before committing}}`
-2. ...
+## 4. Confirm they read it, then start
 
-## Decisions already made
-- {{Chose X over Y}} — {{reason, one line}}
+After writing the plan: summarize in three lines (approach, number of steps, human-review
+flags), point the user at the file, and **ask them to confirm they've read it before you
+ship** — e.g. "¿Lo leíste? ¿Arranco con el ship?" / "Did you read it? Ready for me to ship?".
+Do **not** invoke `ship` on your own here — wait for their explicit go.
 
-## Open decisions
-{{Must be empty.}}
+The plan is exactly what `ship` executes commit-by-commit, so a quick read now catches a wrong
+step before it turns into commits. If they want changes, revise the plan and ask again.
 
-## Risks
-{{What can break, and the rollback.}}
-```
-
-Before writing the file, check it against these. Say which one fails and fix it first:
-
-- **Goal** has no explicit out-of-scope line.
-- **Files to touch** says "the corresponding service" instead of a real path, or the "what
-  changes" cell doesn't name a function, class, or endpoint.
-- A milestone has no **Verify** command, or one that isn't real in this repo — take it from
-  `CLAUDE.md`, don't invent it.
-- **Decisions already made** doesn't carry the discarded alternatives and whatever the user
-  corrected mid-discussion. Without that, someone reopens the debate in a month.
-- **Open decisions** has anything in it. That's a draft, not a plan: back to step 2.
-
-## 4. Close the stage — and stop
-
-The plan is exactly what `ship` executes commit by commit, so a read now catches a wrong step
-before it turns into commits.
-
-1. Summarize in three lines: approach, number of milestones, human-review flags.
-2. Point them at the file and **ask them to confirm they read it**. If they want changes,
-   revise and ask again. If open decisions are left, go back to step 2.
-3. Once they confirm, print exactly this block and **stop**. Don't invoke `ship` yourself,
-   don't offer to, don't start implementing.
-
-   ---
-   Plan ready: docs/plans/{{ticket}}.md
-
-   Run these yourself, in order:
-       /clear plan-{{ticket}}
-       /model sonnet
-       /ship-it:ship docs/plans/{{ticket}}.md
-   ---
-
-The argument to `/clear` names the conversation you're leaving, so it stays findable in
-`/resume` if you need to go back to the discussion. There is no `/rename`.
-
-`/clear` isn't politeness: everything above is already in the file, and dragging it into
-`ship` means re-sending it on every turn of the implementation. If the user prefers to stay in
-this session, do it — but say once that they're paying for this whole conversation on each
-turn from here on.
+Only once they confirm, invoke the `ship` skill in the same turn. If there are open decisions
+left, don't offer to ship yet: go back to step 2 and close them.
 
 ---
 
